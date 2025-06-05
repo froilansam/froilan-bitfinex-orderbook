@@ -1,5 +1,5 @@
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { OrderBookEntry, OrderBookState } from '../../types/orderbook';
-import { ORDER_BOOK_ACTIONS, OrderBookAction } from '../actions/orderBookActions';
 
 const initialState: OrderBookState = {
   data: null,
@@ -14,39 +14,33 @@ const processOrderBookData = (
   rawBids: [number, number, number][],
   rawAsks: [number, number, number][]
 ): { bids: OrderBookEntry[]; asks: OrderBookEntry[] } => {
-  // Sort bids descending (highest price first)
-  const sortedBids = rawBids.sort((a, b) => b[0] - a[0]);
-  // Sort asks ascending (lowest price first)
-  const sortedAsks = rawAsks.sort((a, b) => a[0] - b[0]);
-
-  // Calculate cumulative totals for bids
+  // Process bids - convert to OrderBookEntry format and calculate cumulative totals
   let bidTotal = 0;
-  const bids: OrderBookEntry[] = sortedBids.map(([price, , amount]) => {
+  const bids = rawBids.map(([price, , amount]) => {
     bidTotal += Math.abs(amount);
     return {
       price,
       amount: Math.abs(amount),
-      total: bidTotal,
+      total: parseFloat(bidTotal.toFixed(2)),
     };
   });
 
-  // Calculate cumulative totals for asks (from best ask downward)
-  const asks: OrderBookEntry[] = [];
+  // Process asks - convert to OrderBookEntry format and calculate cumulative totals
   let askTotal = 0;
-  
-  // First calculate total volume
-  const totalAskVolume = sortedAsks.reduce((sum, [, , amount]) => sum + Math.abs(amount), 0);
-  
-  // Then assign decreasing totals
-  for (let i = 0; i < sortedAsks.length; i++) {
-    const [price, , amount] = sortedAsks[i];
+  const asks = rawAsks.map(([price, , amount]) => {
     askTotal += Math.abs(amount);
-    asks.push({
+    return {
       price,
       amount: Math.abs(amount),
-      total: totalAskVolume - askTotal + Math.abs(amount),
-    });
-  }
+      total: parseFloat(askTotal.toFixed(2)),
+    };
+  });
+
+  // Sort bids by price descending (highest price first)
+  bids.sort((a, b) => b.price - a.price);
+  
+  // Sort asks by price ascending (lowest price first)
+  asks.sort((a, b) => a.price - b.price);
 
   return { bids, asks };
 };
@@ -119,95 +113,97 @@ const updateOrderBookData = (
   return processOrderBookData(updatedBids, updatedAsks);
 };
 
-export const orderBookReducer = (
-  state = initialState,
-  action: OrderBookAction
-): OrderBookState => {
-  switch (action.type) {
-    case ORDER_BOOK_ACTIONS.CONNECT_WEBSOCKET:
-      return {
-        ...state,
-        isLoading: true,
-        error: null,
+const orderBookSlice = createSlice({
+  name: 'orderBook',
+  initialState,
+  reducers: {
+    connectWebSocket: (state) => {
+      state.isLoading = true;
+      state.error = null;
+    },
+    disconnectWebSocket: (state) => {
+      state.isLoading = false;
+    },
+    webSocketConnected: (state) => {
+      state.isConnected = true;
+      state.isLoading = false;
+      state.error = null;
+    },
+    webSocketDisconnected: (state) => {
+      state.isConnected = false;
+      state.isLoading = false;
+    },
+    webSocketError: (state, action: PayloadAction<string>) => {
+      state.isConnected = false;
+      state.isLoading = false;
+      state.error = action.payload;
+    },
+    setOrderBookData: (state, action: PayloadAction<{ bids: [number, number, number][]; asks: [number, number, number][] }>) => {
+      const processedData = processOrderBookData(action.payload.bids, action.payload.asks);
+      state.data = {
+        bids: processedData.bids,
+        asks: processedData.asks,
+        symbol: 'BTCUSD',
+        lastUpdated: Date.now(),
       };
-
-    case ORDER_BOOK_ACTIONS.WEBSOCKET_CONNECTED:
-      return {
-        ...state,
-        isConnected: true,
-        isLoading: false,
-        error: null,
-      };
-
-    case ORDER_BOOK_ACTIONS.WEBSOCKET_DISCONNECTED:
-      return {
-        ...state,
-        isConnected: false,
-        isLoading: false,
-        data: null,
-      };
-
-    case ORDER_BOOK_ACTIONS.WEBSOCKET_ERROR:
-      return {
-        ...state,
-        isConnected: false,
-        isLoading: false,
-        error: action.payload,
-      };
-
-    case ORDER_BOOK_ACTIONS.ORDER_BOOK_SNAPSHOT:
-      const snapshotData = processOrderBookData(action.payload.bids, action.payload.asks);
-      return {
-        ...state,
-        data: {
-          bids: snapshotData.bids,
-          asks: snapshotData.asks,
-          symbol: 'BTCUSD',
-          lastUpdated: Date.now(),
-        },
-        isLoading: false,
-        error: null,
-      };
-
-    case ORDER_BOOK_ACTIONS.UPDATE_ORDER_BOOK:
-      if (!state.data) return state;
+      state.isLoading = false;
+      state.error = null;
+    },
+    updateOrderBook: (state, action: PayloadAction<{ bids?: [number, number, number][]; asks?: [number, number, number][] }>) => {
+      if (!state.data) return;
       
       const updatedData = updateOrderBookData(state.data, action.payload);
-      return {
-        ...state,
-        data: {
-          ...state.data,
-          bids: updatedData.bids,
-          asks: updatedData.asks,
-          lastUpdated: Date.now(),
-        },
+      state.data = {
+        ...state.data,
+        bids: updatedData.bids,
+        asks: updatedData.asks,
+        lastUpdated: Date.now(),
       };
-
-    case ORDER_BOOK_ACTIONS.SET_PRECISION:
-      return {
-        ...state,
-        precision: Math.max(0, Math.min(4, action.payload)),
+    },
+    throttledUpdateOrderBook: (state, action: PayloadAction<{ bids?: [number, number, number][]; asks?: [number, number, number][] }>) => {
+      if (!state.data) return;
+      
+      const updatedData = updateOrderBookData(state.data, action.payload);
+      state.data = {
+        ...state.data,
+        bids: updatedData.bids,
+        asks: updatedData.asks,
+        lastUpdated: Date.now(),
       };
+    },
+    setPrecision: (state, action: PayloadAction<number>) => {
+      state.precision = Math.max(0, Math.min(4, action.payload));
+    },
+    changePrecision: (state, action: PayloadAction<number>) => {
+      state.precision = Math.max(0, Math.min(4, action.payload));
+      state.isLoading = true;
+    },
+    setScale: (state, action: PayloadAction<number>) => {
+      state.scale = Math.max(0.5, Math.min(2.0, action.payload));
+    },
+    setError: (state, action: PayloadAction<string>) => {
+      state.error = action.payload;
+    },
+    clearError: (state) => {
+      state.error = null;
+    },
+  },
+});
 
-    case ORDER_BOOK_ACTIONS.SET_SCALE:
-      return {
-        ...state,
-        scale: Math.max(0.5, Math.min(2.0, action.payload)),
-      };
+export const {
+  connectWebSocket,
+  disconnectWebSocket,
+  webSocketConnected,
+  webSocketDisconnected,
+  webSocketError,
+  setOrderBookData,
+  updateOrderBook,
+  throttledUpdateOrderBook,
+  setPrecision,
+  changePrecision,
+  setScale,
+  setError,
+  clearError,
+} = orderBookSlice.actions;
 
-    case ORDER_BOOK_ACTIONS.SET_ERROR:
-      return {
-        ...state,
-        error: action.payload,
-      };
-
-    case ORDER_BOOK_ACTIONS.CLEAR_ERROR:
-      return {
-        ...state,
-        error: null,
-      };
-
-    default:
-      return state;
-  }
-};
+export const orderBookReducer = orderBookSlice.reducer;

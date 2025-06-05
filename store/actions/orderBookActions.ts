@@ -15,6 +15,7 @@ export const ORDER_BOOK_ACTIONS = {
   // UI Controls
   SET_PRECISION: 'SET_PRECISION',
   SET_SCALE: 'SET_SCALE',
+  CHANGE_PRECISION: 'CHANGE_PRECISION',
   
   // Error Handling
   SET_ERROR: 'SET_ERROR',
@@ -44,7 +45,10 @@ export interface WebSocketErrorAction {
 
 export interface SubscribeToSymbolAction {
   type: typeof ORDER_BOOK_ACTIONS.SUBSCRIBE_TO_SYMBOL;
-  payload: string;
+  payload: {
+    symbol: string;
+    precision: string;
+  };
 }
 
 export interface UnsubscribeFromSymbolAction {
@@ -78,6 +82,11 @@ export interface SetScaleAction {
   payload: number;
 }
 
+export interface ChangePrecisionAction {
+  type: typeof ORDER_BOOK_ACTIONS.CHANGE_PRECISION;
+  payload: number;
+}
+
 export interface SetErrorAction {
   type: typeof ORDER_BOOK_ACTIONS.SET_ERROR;
   payload: string;
@@ -99,6 +108,7 @@ export type OrderBookAction =
   | OrderBookSnapshotAction
   | SetPrecisionAction
   | SetScaleAction
+  | ChangePrecisionAction
   | SetErrorAction
   | ClearErrorAction;
 
@@ -124,9 +134,9 @@ export const webSocketError = (error: string): WebSocketErrorAction => ({
   payload: error,
 });
 
-export const subscribeToSymbol = (symbol: string): SubscribeToSymbolAction => ({
+export const subscribeToSymbol = (symbol: string, precision: string): SubscribeToSymbolAction => ({
   type: ORDER_BOOK_ACTIONS.SUBSCRIBE_TO_SYMBOL,
-  payload: symbol,
+  payload: { symbol, precision },
 });
 
 export const unsubscribeFromSymbol = (symbol: string): UnsubscribeFromSymbolAction => ({
@@ -156,6 +166,11 @@ export const setPrecision = (precision: number): SetPrecisionAction => ({
 export const setScale = (scale: number): SetScaleAction => ({
   type: ORDER_BOOK_ACTIONS.SET_SCALE,
   payload: scale,
+});
+
+export const changePrecision = (precision: number): ChangePrecisionAction => ({
+  type: ORDER_BOOK_ACTIONS.CHANGE_PRECISION,
+  payload: precision,
 });
 
 export const setError = (error: string): SetErrorAction => ({
