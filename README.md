@@ -1,10 +1,10 @@
-# Bitfinex Order Book Mobile App
+# Bitfinex Order Book Mobile App (Froilan Sam Malibiran Bitfinex Challenge)
 
 A React Native mobile application that replicates the Order Book widget functionality from the Bitfinex trading platform. Built with Expo, Redux, and Redux Saga.
 
 ## Overview
 
-This application displays a real-time order book for the BTCUSD trading pair using the Bitfinex WebSocket V2 API. The interface shows live bid and ask prices with depth visualization, precision controls, and connection management.
+This application displays a real-time order book for the BTCUSD trading pair using the Bitfinex WebSocket V2 API. The interface shows live bid and ask prices with depth visualization, precision controls, and connection manaement.
 
 ## Features
 
@@ -15,7 +15,6 @@ This application displays a real-time order book for the BTCUSD trading pair usi
 - **Depth visualization**: Animated depth bars showing cumulative order volume
 - **Connection management**: Connect/Disconnect buttons for WebSocket control
 - **Error handling**: Automatic reconnection and error state display
-- **Loading states**: Visual feedback during connection and data loading
 
 ### Technical Implementation
 
@@ -23,7 +22,6 @@ This application displays a real-time order book for the BTCUSD trading pair usi
 - **Redux + Redux Saga** for state management and async operations
 - **WebSocket integration** using Bitfinex WebSocket V2 API
 - **TypeScript** for type safety and better development experience
-- **Smooth animations** for depth bar transitions using React Native Animated API
 
 ## Architecture
 
@@ -65,7 +63,6 @@ Connects to Bitfinex WebSocket V2 API:
 - Node.js (v16 or higher)
 - npm or yarn
 - Expo CLI
-- iOS Simulator or Android Emulator (or physical device with Expo Go)
 
 ### Installation
 
@@ -78,7 +75,7 @@ Connects to Bitfinex WebSocket V2 API:
 2. **Start the development server**
 
    ```bash
-   npx expo start
+   npx run start
    ```
 
 3. **Run on device/simulator**
@@ -106,3 +103,7 @@ npm run reset-project
 3. **Adjust precision** - Use +/- buttons to change price precision (P0-P4)
 4. **Manage connection** - Use Connect/Disconnect button to control WebSocket
 5. **Monitor status** - Connection indicator shows current state (Live/Error/Disconnected)
+
+## Author
+
+Froilan Sam Malibiran
