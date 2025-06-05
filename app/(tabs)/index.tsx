@@ -1,32 +1,32 @@
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, SafeAreaView, StatusBar } from 'react-native';
 import OrderBook from '@/components/OrderBook';
 import { OrderBookEntry } from '@/types/orderbook';
 
 const mockBids: OrderBookEntry[] = [
-  { price: 34829, amount: 1.358, total: 1.358 },
-  { price: 34820, amount: 8.649, total: 10.007 },
-  { price: 34810, amount: 15.19, total: 25.197 },
-  { price: 34800, amount: 20.14, total: 45.337 },
-  { price: 34790, amount: 53.74, total: 99.077 },
-  { price: 34780, amount: 77.65, total: 176.727 },
-  { price: 34770, amount: 111.7, total: 288.427 },
-  { price: 34760, amount: 172.7, total: 461.127 },
-  { price: 34750, amount: 180.0, total: 641.127 },
-  { price: 34740, amount: 186.5, total: 827.627 },
+  { price: 34820, amount: 1.358, total: 1.358 },
+  { price: 34810, amount: 7.291, total: 8.649 },
+  { price: 34800, amount: 6.541, total: 15.19 },
+  { price: 34790, amount: 4.950, total: 20.14 },
+  { price: 34780, amount: 33.60, total: 53.74 },
+  { price: 34770, amount: 23.91, total: 77.65 },
+  { price: 34760, amount: 34.05, total: 111.7 },
+  { price: 34750, amount: 61.00, total: 172.7 },
+  { price: 34740, amount: 7.300, total: 180.0 },
+  { price: 34730, amount: 6.500, total: 186.5 },
 ];
 
 const mockAsks: OrderBookEntry[] = [
-  { price: 34830, amount: 0.0600, total: 0.0600 },
-  { price: 34840, amount: 2.181, total: 2.241 },
-  { price: 34850, amount: 7.315, total: 9.556 },
-  { price: 34860, amount: 13.40, total: 22.956 },
-  { price: 34870, amount: 19.99, total: 42.946 },
-  { price: 34880, amount: 34.11, total: 77.056 },
-  { price: 34890, amount: 36.50, total: 113.556 },
-  { price: 34900, amount: 61.71, total: 175.266 },
-  { price: 34910, amount: 72.01, total: 247.276 },
-  { price: 34920, amount: 93.93, total: 341.206 },
+  { price: 34830, amount: 0.0600, total: 93.93 },
+  { price: 34840, amount: 2.121, total: 72.01 },
+  { price: 34850, amount: 5.134, total: 61.71 },
+  { price: 34860, amount: 6.085, total: 36.50 },
+  { price: 34870, amount: 6.590, total: 34.11 },
+  { price: 34880, amount: 14.12, total: 19.99 },
+  { price: 34890, amount: 2.390, total: 13.40 },
+  { price: 34900, amount: 25.21, total: 7.315 },
+  { price: 34910, amount: 10.30, total: 2.181 },
+  { price: 34920, amount: 21.92, total: 0.0600 },
 ];
 
 export default function HomeScreen() {
@@ -51,7 +51,8 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
       <OrderBook
         bids={mockBids}
         asks={mockAsks}
@@ -64,7 +65,7 @@ export default function HomeScreen() {
         onDisconnect={handleDisconnect}
         isConnected={isConnected}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
