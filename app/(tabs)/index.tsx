@@ -1,75 +1,76 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import OrderBook from '@/components/OrderBook';
+import { OrderBookEntry } from '@/types/orderbook';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+const mockBids: OrderBookEntry[] = [
+  { price: 34829, amount: 1.358, total: 1.358 },
+  { price: 34820, amount: 8.649, total: 10.007 },
+  { price: 34810, amount: 15.19, total: 25.197 },
+  { price: 34800, amount: 20.14, total: 45.337 },
+  { price: 34790, amount: 53.74, total: 99.077 },
+  { price: 34780, amount: 77.65, total: 176.727 },
+  { price: 34770, amount: 111.7, total: 288.427 },
+  { price: 34760, amount: 172.7, total: 461.127 },
+  { price: 34750, amount: 180.0, total: 641.127 },
+  { price: 34740, amount: 186.5, total: 827.627 },
+];
+
+const mockAsks: OrderBookEntry[] = [
+  { price: 34830, amount: 0.0600, total: 0.0600 },
+  { price: 34840, amount: 2.181, total: 2.241 },
+  { price: 34850, amount: 7.315, total: 9.556 },
+  { price: 34860, amount: 13.40, total: 22.956 },
+  { price: 34870, amount: 19.99, total: 42.946 },
+  { price: 34880, amount: 34.11, total: 77.056 },
+  { price: 34890, amount: 36.50, total: 113.556 },
+  { price: 34900, amount: 61.71, total: 175.266 },
+  { price: 34910, amount: 72.01, total: 247.276 },
+  { price: 34920, amount: 93.93, total: 341.206 },
+];
 
 export default function HomeScreen() {
+  const [precision, setPrecision] = useState(0);
+  const [scale, setScale] = useState(1.0);
+  const [isConnected, setIsConnected] = useState(false);
+
+  const handleConnect = () => {
+    setIsConnected(true);
+  };
+
+  const handleDisconnect = () => {
+    setIsConnected(false);
+  };
+
+  const handlePrecisionChange = (newPrecision: number) => {
+    setPrecision(newPrecision);
+  };
+
+  const handleScaleChange = (newScale: number) => {
+    setScale(newScale);
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      <OrderBook
+        bids={mockBids}
+        asks={mockAsks}
+        symbol="BTC/USD"
+        precision={precision}
+        scale={scale}
+        onPrecisionChange={handlePrecisionChange}
+        onScaleChange={handleScaleChange}
+        onConnect={handleConnect}
+        onDisconnect={handleDisconnect}
+        isConnected={isConnected}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    backgroundColor: '#1a1a1a',
   },
 });
