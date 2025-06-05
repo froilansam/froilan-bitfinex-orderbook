@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useMemo, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,9 +14,7 @@ import { OrderBookEntry } from "../types/orderbook";
 interface OrderBookProps {
   bids: OrderBookEntry[];
   asks: OrderBookEntry[];
-  symbol: string;
   precision: number;
-  scale: number;
   onPrecisionChange: (precision: number) => void;
   onConnect: () => void;
   onDisconnect: () => void;
@@ -27,9 +26,7 @@ interface OrderBookProps {
 const OrderBook: React.FC<OrderBookProps> = ({
   bids,
   asks,
-  symbol,
   precision,
-  scale,
   onPrecisionChange,
   onConnect,
   onDisconnect,
@@ -37,83 +34,171 @@ const OrderBook: React.FC<OrderBookProps> = ({
   isLoading = false,
   error = null,
 }) => {
-  const formatPrice = (price: number): string => {
-    return Math.round(price).toLocaleString("en-US");
-  };
+  const formatPrice = useMemo(
+    () =>
+      (price: number): string => {
+        return Math.round(price).toLocaleString("en-US");
+      },
+    []
+  );
 
-  const formatAmount = (amount: number): string => {
-    return amount.toFixed(2);
-  };
+  const formatAmount = useMemo(
+    () =>
+      (amount: number): string => {
+        return amount.toFixed(2);
+      },
+    []
+  );
 
-  const getDepthBarWidth = (total: number, maxTotal: number): number => {
-    if (maxTotal === 0) return 0;
-    return (total / maxTotal) * 100;
-  };
+  const getDepthBarWidth = useMemo(
+    () =>
+      (total: number, maxTotal: number): number => {
+        if (maxTotal === 0) return 0;
+        return (total / maxTotal) * 100;
+      },
+    []
+  );
 
-  // Get the first 10 entries for calculating max total
-  const displayedBids = bids.slice(0, 10);
-  const displayedAsks = asks.slice(0, 10);
-  const allTotals = [...displayedBids.map(b => b.total), ...displayedAsks.map(a => a.total)];
-  const maxTotal = allTotals.length > 0 ? Math.max(...allTotals) : 0;
+  const { displayedBids, displayedAsks, maxTotal } = useMemo(() => {
+    const slicedBids = bids.slice(0, 10);
+    const slicedAsks = asks.slice(0, 10);
+    const allTotals = [
+      ...slicedBids.map((b) => b.total),
+      ...slicedAsks.map((a) => a.total),
+    ];
+    const max = allTotals.length > 0 ? Math.max(...allTotals) : 0;
 
-  const renderOrderRow = (
-    bidEntry: OrderBookEntry | null,
-    askEntry: OrderBookEntry | null,
-    maxTotal: number,
-    index: number
-  ) => {
-    const bidDepthWidth = bidEntry
-      ? getDepthBarWidth(bidEntry.total, maxTotal)
-      : 0;
-    const askDepthWidth = askEntry
-      ? getDepthBarWidth(askEntry.total, maxTotal)
-      : 0;
+    return {
+      displayedBids: slicedBids,
+      displayedAsks: slicedAsks,
+      maxTotal: max,
+    };
+  }, [bids, asks]);
+
+  const statusIndicatorStyle = useMemo(
+    () => [
+      {
+        backgroundColor: isConnected
+          ? COLORS.green
+          : error
+          ? COLORS.red
+          : COLORS.gray,
+      },
+    ],
+    [isConnected, error]
+  );
+
+  const connectButtonStyle = useMemo(
+    () => [
+      {
+        backgroundColor: isConnected ? "#ff6b6b" : COLORS.green,
+      },
+    ],
+    [isConnected]
+  );
+
+  const decreasePrecisionStyle = useMemo(
+    () => [
+      {
+        opacity: precision === 4 ? 0.3 : 1,
+      },
+    ],
+    [precision]
+  );
+
+  const increasePrecisionStyle = useMemo(
+    () => [
+      {
+        opacity: precision === 0 ? 0.3 : 1,
+      },
+    ],
+    [precision]
+  );
+
+  const AnimatedDepthBar = ({ width, style }: { width: number; style: any }) => {
+    const animatedWidth = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+      Animated.timing(animatedWidth, {
+        toValue: width,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+    }, [width]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
-      <View key={`row-${index}`} style={styles.orderRow}>
-        <View style={styles.bidSide}>
-          {bidEntry && (
-            <View
-              style={[
-                styles.depthBar,
-                styles.bidDepthBar,
-                { width: `${bidDepthWidth}%` },
-              ]}
-            />
-          )}
-          <View style={styles.sideContent}>
-            <Text style={[styles.amountText, styles.leftAlign]}>
-              {bidEntry ? formatAmount(bidEntry.amount) : ""}
-            </Text>
-            <Text
-              style={[styles.priceText, styles.rightAlign, styles.bidPrice]}
-            >
-              {bidEntry ? formatPrice(bidEntry.price) : ""}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.askSide}>
-          {askEntry && (
-            <View
-              style={[
-                styles.depthBar,
-                styles.askDepthBar,
-                { width: `${askDepthWidth}%` },
-              ]}
-            />
-          )}
-          <View style={styles.sideContent}>
-            <Text style={[styles.priceText, styles.leftAlign, styles.askPrice]}>
-              {askEntry ? formatPrice(askEntry.price) : ""}
-            </Text>
-            <Text style={[styles.amountText, styles.rightAlign]}>
-              {askEntry ? formatAmount(askEntry.amount) : ""}
-            </Text>
-          </View>
-        </View>
-      </View>
+      <Animated.View
+        style={[
+          style,
+          {
+            width: animatedWidth.interpolate({
+              inputRange: [0, 100],
+              outputRange: ['0%', '100%'],
+              extrapolate: 'clamp',
+            }),
+          },
+        ]}
+      />
     );
   };
+
+  const renderOrderRow = useMemo(() => {
+    const OrderRow = (
+      bidEntry: OrderBookEntry | null,
+      askEntry: OrderBookEntry | null,
+      maxTotal: number,
+      index: number
+    ) => {
+      const bidDepthWidth = bidEntry
+        ? getDepthBarWidth(bidEntry.total, maxTotal)
+        : 0;
+      const askDepthWidth = askEntry
+        ? getDepthBarWidth(askEntry.total, maxTotal)
+        : 0;
+
+      return (
+        <View key={`row-${index}`} style={styles.orderRow}>
+          <View style={styles.bidSide}>
+            {bidEntry && (
+              <AnimatedDepthBar
+                width={bidDepthWidth}
+                style={[styles.depthBar, styles.bidDepthBar]}
+              />
+            )}
+            <View style={styles.sideContent}>
+              <Text style={[styles.amountText, styles.leftAlign]}>
+                {bidEntry ? formatAmount(bidEntry.amount) : ""}
+              </Text>
+              <Text
+                style={[styles.priceText, styles.rightAlign, styles.bidPrice]}
+              >
+                {bidEntry ? formatPrice(bidEntry.price) : ""}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.askSide}>
+            {askEntry && (
+              <AnimatedDepthBar
+                width={askDepthWidth}
+                style={[styles.depthBar, styles.askDepthBar]}
+              />
+            )}
+            <View style={styles.sideContent}>
+              <Text
+                style={[styles.priceText, styles.leftAlign, styles.askPrice]}
+              >
+                {askEntry ? formatPrice(askEntry.price) : ""}
+              </Text>
+              <Text style={[styles.amountText, styles.rightAlign]}>
+                {askEntry ? formatAmount(askEntry.amount) : ""}
+              </Text>
+            </View>
+          </View>
+        </View>
+      );
+    };
+    return OrderRow;
+  }, [formatAmount, formatPrice, getDepthBarWidth]);
 
   return (
     <View style={styles.container}>
@@ -121,18 +206,7 @@ const OrderBook: React.FC<OrderBookProps> = ({
         <View style={styles.titleContainer}>
           <Text style={styles.title}>ORDER BOOK</Text>
           <View style={styles.statusContainer}>
-            <View
-              style={[
-                styles.statusIndicator,
-                {
-                  backgroundColor: isConnected
-                    ? "#16b979"
-                    : error
-                    ? "#c74e5b"
-                    : "#888888",
-                },
-              ]}
-            />
+            <View style={[styles.statusIndicator, statusIndicatorStyle]} />
             <Text style={styles.statusText}>
               {isLoading
                 ? "Connecting..."
@@ -146,10 +220,7 @@ const OrderBook: React.FC<OrderBookProps> = ({
         </View>
         <View style={styles.controls}>
           <TouchableOpacity
-            style={[
-              styles.controlButton,
-              precision === 4 && styles.controlButtonDisabled,
-            ]}
+            style={[styles.controlButton, decreasePrecisionStyle]}
             onPress={() => {
               if (precision < 4) onPrecisionChange(precision + 1);
             }}
@@ -165,10 +236,7 @@ const OrderBook: React.FC<OrderBookProps> = ({
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[
-              styles.controlButton,
-              precision === 0 && styles.controlButtonDisabled,
-            ]}
+            style={[styles.controlButton, increasePrecisionStyle]}
             onPress={() => {
               if (precision > 0) onPrecisionChange(precision - 1);
             }}
@@ -200,21 +268,26 @@ const OrderBook: React.FC<OrderBookProps> = ({
       </View>
 
       <View style={styles.orderListContainer}>
-        <ScrollView style={styles.orderList} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.orderList}
+          showsVerticalScrollIndicator={false}
+        >
           {Array.from(
-            { length: 10 },
+            {
+              length: Math.max(displayedBids.length, displayedAsks.length, 10),
+            },
             (_, index) => {
-              const bidEntry = bids[index] || null;
-              const askEntry = asks[index] || null;
+              const bidEntry = displayedBids[index] || null;
+              const askEntry = displayedAsks[index] || null;
 
               return renderOrderRow(bidEntry, askEntry, maxTotal, index);
             }
           )}
         </ScrollView>
-        
+
         {isLoading && (
           <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#16b979" />
+            <ActivityIndicator size="large" color={COLORS.green} />
             <Text style={styles.loadingText}>Loading...</Text>
           </View>
         )}
@@ -222,10 +295,7 @@ const OrderBook: React.FC<OrderBookProps> = ({
 
       <View style={styles.bottomControls}>
         <TouchableOpacity
-          style={[
-            styles.connectButton,
-            { backgroundColor: isConnected ? "#ff6b6b" : "#16b979" },
-          ]}
+          style={[styles.connectButton, connectButtonStyle]}
           onPress={isConnected ? onDisconnect : onConnect}
         >
           <Text style={styles.connectButtonText}>
@@ -237,10 +307,25 @@ const OrderBook: React.FC<OrderBookProps> = ({
   );
 };
 
+const COLORS = {
+  background: "#2a3442",
+  text: "#ffffff",
+  textSecondary: "#8b95a7",
+  border: "#3a4452",
+  green: "#16b979",
+  red: "#c74e5b",
+  gray: "#888888",
+  error: "#4a1a1a",
+  loading: "rgba(42, 52, 66, 0.9)",
+  textDisabled: "#555555",
+} as const;
+
+const FONT_FAMILY = Platform.OS === "ios" ? "Menlo" : "monospace";
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#2a3442",
+    backgroundColor: COLORS.background,
     padding: 18,
     borderRadius: 6,
   },
@@ -257,7 +342,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    color: "#ffffff",
+    color: COLORS.text,
     fontSize: 18,
     fontWeight: "bold",
   },
@@ -272,22 +357,22 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   statusText: {
-    color: "#8b95a7",
+    color: COLORS.textSecondary,
     fontSize: 12,
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+    fontFamily: FONT_FAMILY,
   },
   errorContainer: {
-    backgroundColor: "#4a1a1a",
+    backgroundColor: COLORS.error,
     padding: 8,
     marginBottom: 8,
     borderRadius: 4,
     borderLeftWidth: 3,
-    borderLeftColor: "#c74e5b",
+    borderLeftColor: COLORS.red,
   },
   errorText: {
-    color: "#c74e5b",
+    color: COLORS.red,
     fontSize: 12,
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+    fontFamily: FONT_FAMILY,
   },
   controls: {
     flexDirection: "row",
@@ -301,21 +386,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 4,
   },
-  controlButtonDisabled: {
-    opacity: 0.3,
-  },
   controlButtonText: {
-    color: "#8b95a7",
+    color: COLORS.textSecondary,
     fontSize: 18,
     fontWeight: "bold",
   },
   controlButtonTextDisabled: {
-    color: "#555555",
+    color: COLORS.textDisabled,
   },
   bottomControls: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: "#3a4452",
+    borderTopColor: COLORS.border,
   },
   connectButton: {
     paddingVertical: 12,
@@ -324,7 +406,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   connectButtonText: {
-    color: "#ffffff",
+    color: COLORS.text,
     fontSize: 16,
     fontWeight: "bold",
   },
@@ -332,11 +414,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#3a4452",
+    borderBottomColor: COLORS.border,
     marginBottom: 8,
   },
   headerText: {
-    color: "#8b95a7",
+    color: COLORS.textSecondary,
     fontSize: 13,
     fontWeight: "500",
     flex: 1,
@@ -357,17 +439,17 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(42, 52, 66, 0.9)",
+    backgroundColor: COLORS.loading,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 10,
   },
   loadingText: {
-    color: "#16b979",
+    color: COLORS.green,
     fontSize: 16,
     fontWeight: "bold",
     marginTop: 12,
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+    fontFamily: FONT_FAMILY,
   },
   orderRow: {
     flexDirection: "row",
@@ -399,31 +481,31 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   bidDepthBar: {
-    backgroundColor: "#16b979",
+    backgroundColor: COLORS.green,
     right: 0,
   },
   askDepthBar: {
-    backgroundColor: "#c74e5b",
+    backgroundColor: COLORS.red,
     left: 0,
   },
   amountText: {
-    color: "#ffffff",
+    color: COLORS.text,
     fontSize: 14,
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+    fontFamily: FONT_FAMILY,
     flex: 1,
   },
   priceText: {
-    color: "#ffffff",
+    color: COLORS.text,
     fontSize: 14,
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+    fontFamily: FONT_FAMILY,
     fontWeight: "bold",
     flex: 1,
   },
   bidPrice: {
-    color: "#16b979",
+    color: COLORS.green,
   },
   askPrice: {
-    color: "#c74e5b",
+    color: COLORS.red,
   },
   leftAlign: {
     textAlign: "left",

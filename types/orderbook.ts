@@ -17,7 +17,6 @@ export interface OrderBookState {
   isLoading: boolean;
   error: string | null;
   precision: number;
-  scale: number;
 }
 
 export interface WebSocketMessage {

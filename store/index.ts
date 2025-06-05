@@ -1,5 +1,4 @@
 import { configureStore } from "@reduxjs/toolkit";
-
 import { orderBookReducer } from "./reducers/orderBookReducer";
 import rootSaga from "./sagas/index";
 
@@ -21,7 +20,6 @@ export const store = configureStore({
   devTools: process.env.NODE_ENV !== "production",
 });
 
-// Initialize saga middleware
 try {
   sagaMiddleware.run(rootSaga);
 } catch (error) {

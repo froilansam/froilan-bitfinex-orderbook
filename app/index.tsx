@@ -4,14 +4,13 @@ import {
   changePrecision,
   connectWebSocket,
   disconnectWebSocket,
-  setScale,
 } from "@/store/reducers/orderBookReducer";
 import { useMemo } from "react";
 import { SafeAreaView, StatusBar, StyleSheet } from "react-native";
 
 export default function HomeScreen() {
   const dispatch = useAppDispatch();
-  const { data, isConnected, isLoading, error, precision, scale } =
+  const { data, isConnected, isLoading, error, precision } =
     useAppSelector((state) => state.orderBook);
 
   const handleConnect = () => {
@@ -26,23 +25,16 @@ export default function HomeScreen() {
     dispatch(changePrecision(newPrecision));
   };
 
-  const handleScaleChange = (newScale: number) => {
-    dispatch(setScale(newScale));
-  };
-
-  // Use actual data from last connection, or empty arrays if no data
   const bids = useMemo(() => data?.bids || [], [data?.bids]);
   const asks = useMemo(() => data?.asks || [], [data?.asks]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
+      <StatusBar barStyle="dark-content" />
       <OrderBook
         bids={bids}
         asks={asks}
-        symbol="BTC/USD"
         precision={precision}
-        scale={scale}
         onPrecisionChange={handlePrecisionChange}
         onConnect={handleConnect}
         onDisconnect={handleDisconnect}
@@ -57,6 +49,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#2a3442",
   },
 });

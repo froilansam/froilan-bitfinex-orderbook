@@ -1,5 +1,5 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { OrderBookEntry, OrderBookState } from '../../types/orderbook';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { OrderBookEntry, OrderBookState } from "../../types/orderbook";
 
 const initialState: OrderBookState = {
   data: null,
@@ -7,14 +7,12 @@ const initialState: OrderBookState = {
   isLoading: false,
   error: null,
   precision: 0,
-  scale: 1.0,
 };
 
 const processOrderBookData = (
   rawBids: [number, number, number][],
   rawAsks: [number, number, number][]
 ): { bids: OrderBookEntry[]; asks: OrderBookEntry[] } => {
-  // Process bids - convert to OrderBookEntry format and calculate cumulative totals
   let bidTotal = 0;
   const bids = rawBids.map(([price, , amount]) => {
     bidTotal += Math.abs(amount);
@@ -25,7 +23,6 @@ const processOrderBookData = (
     };
   });
 
-  // Process asks - convert to OrderBookEntry format and calculate cumulative totals
   let askTotal = 0;
   const asks = rawAsks.map(([price, , amount]) => {
     askTotal += Math.abs(amount);
@@ -36,10 +33,8 @@ const processOrderBookData = (
     };
   });
 
-  // Sort bids by price descending (highest price first)
   bids.sort((a, b) => b.price - a.price);
-  
-  // Sort asks by price ascending (lowest price first)
+
   asks.sort((a, b) => a.price - b.price);
 
   return { bids, asks };
@@ -47,40 +42,35 @@ const processOrderBookData = (
 
 const updateOrderBookData = (
   currentData: { bids: OrderBookEntry[]; asks: OrderBookEntry[] } | null,
-  updates: { bids?: [number, number, number][]; asks?: [number, number, number][] }
+  updates: {
+    bids?: [number, number, number][];
+    asks?: [number, number, number][];
+  }
 ): { bids: OrderBookEntry[]; asks: OrderBookEntry[] } => {
   if (!currentData) {
     return processOrderBookData(updates.bids || [], updates.asks || []);
   }
 
-  // Convert current data back to raw format for processing
-  const currentBids: [number, number, number][] = currentData.bids.map(bid => [
-    bid.price,
-    1,
-    bid.amount,
-  ]);
-  
-  const currentAsks: [number, number, number][] = currentData.asks.map(ask => [
-    ask.price,
-    1,
-    ask.amount,
-  ]);
+  const currentBids: [number, number, number][] = currentData.bids.map(
+    (bid) => [bid.price, 1, bid.amount]
+  );
 
-  // Apply updates
+  const currentAsks: [number, number, number][] = currentData.asks.map(
+    (ask) => [ask.price, 1, ask.amount]
+  );
+
   let updatedBids = currentBids;
   let updatedAsks = currentAsks;
 
   if (updates.bids) {
     updates.bids.forEach(([price, count, amount]) => {
       const existingIndex = updatedBids.findIndex(([p]) => p === price);
-      
+
       if (count === 0 || amount === 0) {
-        // Remove the price level
         if (existingIndex !== -1) {
           updatedBids.splice(existingIndex, 1);
         }
       } else {
-        // Update or add the price level
         if (existingIndex !== -1) {
           updatedBids[existingIndex] = [price, count, amount];
         } else {
@@ -93,14 +83,12 @@ const updateOrderBookData = (
   if (updates.asks) {
     updates.asks.forEach(([price, count, amount]) => {
       const existingIndex = updatedAsks.findIndex(([p]) => p === price);
-      
+
       if (count === 0 || amount === 0) {
-        // Remove the price level
         if (existingIndex !== -1) {
           updatedAsks.splice(existingIndex, 1);
         }
       } else {
-        // Update or add the price level
         if (existingIndex !== -1) {
           updatedAsks[existingIndex] = [price, count, amount];
         } else {
@@ -114,7 +102,7 @@ const updateOrderBookData = (
 };
 
 const orderBookSlice = createSlice({
-  name: 'orderBook',
+  name: "orderBook",
   initialState,
   reducers: {
     connectWebSocket: (state) => {
@@ -138,20 +126,35 @@ const orderBookSlice = createSlice({
       state.isLoading = false;
       state.error = action.payload;
     },
-    setOrderBookData: (state, action: PayloadAction<{ bids: [number, number, number][]; asks: [number, number, number][] }>) => {
-      const processedData = processOrderBookData(action.payload.bids, action.payload.asks);
+    setOrderBookData: (
+      state,
+      action: PayloadAction<{
+        bids: [number, number, number][];
+        asks: [number, number, number][];
+      }>
+    ) => {
+      const processedData = processOrderBookData(
+        action.payload.bids,
+        action.payload.asks
+      );
       state.data = {
         bids: processedData.bids,
         asks: processedData.asks,
-        symbol: 'BTCUSD',
+        symbol: "BTCUSD",
         lastUpdated: Date.now(),
       };
       state.isLoading = false;
       state.error = null;
     },
-    updateOrderBook: (state, action: PayloadAction<{ bids?: [number, number, number][]; asks?: [number, number, number][] }>) => {
+    updateOrderBook: (
+      state,
+      action: PayloadAction<{
+        bids?: [number, number, number][];
+        asks?: [number, number, number][];
+      }>
+    ) => {
       if (!state.data) return;
-      
+
       const updatedData = updateOrderBookData(state.data, action.payload);
       state.data = {
         ...state.data,
@@ -160,9 +163,15 @@ const orderBookSlice = createSlice({
         lastUpdated: Date.now(),
       };
     },
-    throttledUpdateOrderBook: (state, action: PayloadAction<{ bids?: [number, number, number][]; asks?: [number, number, number][] }>) => {
+    throttledUpdateOrderBook: (
+      state,
+      action: PayloadAction<{
+        bids?: [number, number, number][];
+        asks?: [number, number, number][];
+      }>
+    ) => {
       if (!state.data) return;
-      
+
       const updatedData = updateOrderBookData(state.data, action.payload);
       state.data = {
         ...state.data,
@@ -177,9 +186,6 @@ const orderBookSlice = createSlice({
     changePrecision: (state, action: PayloadAction<number>) => {
       state.precision = Math.max(0, Math.min(4, action.payload));
       state.isLoading = true;
-    },
-    setScale: (state, action: PayloadAction<number>) => {
-      state.scale = Math.max(0.5, Math.min(2.0, action.payload));
     },
     setError: (state, action: PayloadAction<string>) => {
       state.error = action.payload;
@@ -201,7 +207,6 @@ export const {
   throttledUpdateOrderBook,
   setPrecision,
   changePrecision,
-  setScale,
   setError,
   clearError,
 } = orderBookSlice.actions;
